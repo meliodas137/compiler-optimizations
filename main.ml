@@ -22,8 +22,8 @@ let process_fn fn =
    | Fn {name; args; body; pos} -> print_string ("==========================\nProcessing function: " ^ name ^ "\n"));
   print_string ("blocks =\n" ^
     (Cfg_ast.fun2string curfblocks)^ "\n");
-  let ig = Cfg.build_interfere_graph curfblocks in
-  print_string (Cfg.string_of_igraph ig);
+  (* let ig = Cfg.build_interfere_graph curfblocks in
+  print_string ((Cfg.string_of_igraph ig)^ "\n"); *)
   let ae = Available.available_expression curfblocks in
   print_string (Available.string_of_avails ae)
 

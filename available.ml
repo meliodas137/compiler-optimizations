@@ -2,19 +2,6 @@ open Cfg_ast
 exception Implement_Me
 exception FatalError
 
-(* These are the registers that must be generated / killed as part of
-   liveness analysis for call instructions to reflect MIPS calling
-   conventions *)
-
-
-let call_gen_list = ["$4";"$5";"$6";"$7"]
-let call_kill_list = ["$1";"$2";"$3";"$4";"$5";"$6";"$7";"$8";"$9";"$10";
-                      "$11";"$12";"$13";"$14";"$15";"$24";"$25";"$31"]
-
-let string_of_avails ae : string = Printf.sprintf "Print Available expressions"
-
-(*******************************************************************)
-
 type aexp = B_op of (operand * arithop * operand) | Mem of (operand*int)
 module AExpression =
 struct
@@ -123,3 +110,18 @@ let rec available_expression (f : func) : in_out =
   let am = init_avail f in 
   let pm = init_pred f in
   construct_available_dataflow f am pm
+(* End of Driver*)
+
+(******************************** Printing Functions **********************************)
+
+let print_set (s: AvailSet.t) = 
+  let aexp_to_string aexp = match aexp with 
+  | B_op (op1, a_op, op2) -> (op2string op1) ^ (arithop2string a_op) ^ (op2string op2)
+  | Mem (op, i) -> "*(" ^ (op2string op) ^ "+" ^ (string_of_int i)^")" in
+  let exp_strings = List.map aexp_to_string (AvailSet.to_list s) in
+  String.concat "; " exp_strings
+
+let string_of_avails (ae: in_out) : string = 
+  let print_label_exp (k, (v_in, v_out)) = Printf.sprintf "%s:\n\tin: %s\n\tout:%s" k (print_set v_in) (print_set v_out) in
+  let rows = String.concat "\n" (List.map print_label_exp (LabelMap.to_list ae)) in 
+  Printf.sprintf "{\n%s\n}" rows

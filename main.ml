@@ -23,7 +23,9 @@ let process_fn fn =
   print_string ("blocks =\n" ^
     (Cfg_ast.fun2string curfblocks)^ "\n");
   let ig = Cfg.build_interfere_graph curfblocks in
-  print_string (Cfg.string_of_igraph ig)
+  print_string (Cfg.string_of_igraph ig);
+  let ae = Available.available_expression curfblocks in
+  print_string (Available.string_of_avails ae)
 
 let _ =
   let prog = parse_file() in

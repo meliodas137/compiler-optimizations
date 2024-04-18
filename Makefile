@@ -25,8 +25,9 @@ cfg: mips cish
 	$(COMPILER) -c cfg_ast.ml
 	$(COMPILER) -c graph.ml
 	$(COMPILER) -c cfg.ml
+	$(COMPILER) -c available.ml
 	$(COMPILER) -c main.ml
-	$(COMPILER) -o optimize cish_ast.cmo cish_lex.cmo cish_parse.cmo word32.cmo mips.cmo cfg_ast.cmo graph.cmo cfg.cmo main.cmo
+	$(COMPILER) -o optimize cish_ast.cmo cish_lex.cmo cish_parse.cmo word32.cmo mips.cmo cfg_ast.cmo graph.cmo cfg.cmo available.cmo main.cmo
 
 clean:
 	-rm *.cmo *.cmi optimize cish_parse.ml cish_parse.mli cish_lex.ml 

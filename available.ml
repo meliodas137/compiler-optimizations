@@ -281,25 +281,15 @@ let rec init_avail (f: func): in_out =
   List.fold_left (fun acc x -> init_avail_helper x acc) LabelMap.empty f
 (* End of init *)
 
-(* Main available expression loop *)
-let map_compare (tup1: (AvailSet.t * AvailSet.t)) (tup2: (AvailSet.t* AvailSet.t)) =
-  if ((AvailSet.equal (fst tup1) (fst tup2)) && (AvailSet.equal (snd tup1) (snd tup2))) then true else false
-
-let rec available_dataflow_helper (f: func) (am: in_out) (pm: pred_map): in_out = raise Implement_Me
-
-let rec construct_available_dataflow (f: func) (old_am: in_out) (pm: pred_map): in_out = 
-  let new_am = available_dataflow_helper f old_am pm in 
-  if (LabelMap.equal map_compare new_am old_am) then new_am else construct_available_dataflow f new_am pm
-(* End of main loop *)
 
 (* Construct Pred mapping to use further *)
-let get_set l map = (match LabelMap.find_opt l map with None -> LabelSet.empty | Some s -> s)
+let get_pred_set l map = (match LabelMap.find_opt l map with None -> LabelSet.empty | Some s -> s)
 
 let update_pred inst acc pred_l = match inst with 
-  | Jump l -> LabelMap.add l (LabelSet.add pred_l (get_set l acc)) acc
+  | Jump l -> LabelMap.add l (LabelSet.add pred_l (get_pred_set l acc)) acc
   | If(_, _, _, l1, l2) -> 
-    let new_acc = LabelMap.add l2 (LabelSet.add pred_l (get_set l2 acc)) acc in 
-    LabelMap.add l1 (LabelSet.add pred_l (get_set l1 new_acc)) new_acc
+    let new_acc = LabelMap.add l2 (LabelSet.add pred_l (get_pred_set l2 acc)) acc in 
+    LabelMap.add l1 (LabelSet.add pred_l (get_pred_set l1 new_acc)) new_acc
   | _ -> acc
 
 let init_pred (f: func) : pred_map = 
@@ -308,6 +298,36 @@ let init_pred (f: func) : pred_map =
     | _ -> pm) in
   List.fold_left (fun acc x -> init_pred_helper acc x) LabelMap.empty f
 (* End of pred map construction *)
+
+(* Main available expression loop *)
+let map_compare (tup1: (AvailSet.t * AvailSet.t)) (tup2: (AvailSet.t* AvailSet.t)) =
+  if ((AvailSet.equal (fst tup1) (fst tup2)) && (AvailSet.equal (snd tup1) (snd tup2))) then true else false
+
+let get_avail_out_set l mp = 
+  let (_, out) = (match LabelMap.find_opt l mp with None -> (AvailSet.empty, AvailSet.empty) | Some s -> s)
+  in out
+
+let rec construct_in (old_am: in_out) (pred_list: String.t list) : AvailSet.t = match pred_list with
+  | [] -> AvailSet.empty 
+  | hd::[] -> get_avail_out_set hd old_am
+  | hd::tl -> AvailSet.inter (get_avail_out_set hd old_am) (construct_in old_am tl)
+  
+let rec construct_out (b: block) (old_am: in_out) (new_in: AvailSet.t) : AvailSet.t =
+  let gen = List.fold_left (fun acc inst -> inst_gen_helper inst acc) AvailSet.empty b in
+  let kill = List.fold_left (fun acc inst -> inst_kill_helper inst acc) AvailSet.empty b in
+  (AvailSet.union gen (AvailSet.diff new_in kill))
+
+let rec available_dataflow_helper (b: block) (new_am: in_out) (old_am: in_out) (pm: pred_map): in_out = match b with 
+  | (Label l)::_ -> 
+    let new_in = construct_in old_am (LabelSet.to_list (get_pred_set l pm)) in 
+    let new_out = construct_out b old_am new_in in
+    LabelMap.add l (new_in, new_out) new_am
+  | _ -> new_am
+
+let rec construct_available_dataflow (f: func) (old_am: in_out) (pm: pred_map): in_out = 
+  let new_am = List.fold_left (fun acc b -> available_dataflow_helper b acc old_am pm) LabelMap.empty f in 
+  if (LabelMap.equal map_compare new_am old_am) then new_am else construct_available_dataflow f new_am pm
+(* End of main loop *)
 
 (* Driver Function *)
 let rec build_interfere_graph (f : func) : in_out = 

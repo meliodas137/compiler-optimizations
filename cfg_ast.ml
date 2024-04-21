@@ -280,10 +280,10 @@ let fn2blocks (C.Fn {C.name=name;C.args=args;C.body=body;C.pos=pos}) : block lis
             emit_stmt env' s
     ) in
     
-    let callee_regs = 
+    (* let callee_regs = 
         [fp;ra] @ (List.map (fun x -> Reg x) 
                       [Mips.R16;Mips.R17;Mips.R18;Mips.R19;Mips.R20;
-                       Mips.R21;Mips.R22;Mips.R23]) in
+                       Mips.R21;Mips.R22;Mips.R23]) in *)
 
     (* generate code to move the callee-saves registers into fresh
      * temps, and then return an association list mapping each callee-

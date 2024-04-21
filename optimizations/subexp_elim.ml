@@ -26,7 +26,8 @@ let traverse_block (e: aexp) (b: block) (temp: string) (avail_in: AvailSet.t): b
             match (get_bop_exp hd) with
               | Some(e1) when e1 = e -> (
                   match hd with 
-                    | Arith(x, y, op, z) -> (b_acc @ [Move(x, Var(temp)); Arith(Var(temp), y, op, z)] @ tl)
+                    | Arith(x, y, op, z) when x <> Var(temp) -> (b_acc @ [Move(x, Var(temp)); Arith(Var(temp), y, op, z)] @ tl)
+                    | Arith(x, y, op, z) -> (b_acc @ [hd] @ tl)
                     | _ -> raise Implement_Me
               )
               | _ -> helper (b_acc @ [hd]) (tl) 

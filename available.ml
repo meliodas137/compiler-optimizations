@@ -15,7 +15,7 @@ module AvailSet = Set.Make(AExpression)
 
 module LabelSet = Set.Make(String)
 
-type in_out = ((AvailSet.t * AvailSet.t) LabelMap.t)
+type avail_in_out = ((AvailSet.t * AvailSet.t) LabelMap.t)
 
 type pred_map = (LabelSet.t LabelMap.t)
 
@@ -49,12 +49,12 @@ let collect_all_exp inst r_set = match inst with
   | Load(op1, op2, i) -> AvailSet.add (Mem (op2, i)) r_set
   | _ -> r_set
 
-let rec init_avail_helper (b: block) (reach_map: in_out): in_out = match b with
+let rec init_avail_helper (b: block) (reach_map: avail_in_out): avail_in_out = match b with
   | (Label l)::tl -> let out_set = List.fold_left (fun acc x -> collect_all_exp x acc) AvailSet.empty b in
     LabelMap.add l (AvailSet.empty, out_set) reach_map
   | _ -> reach_map
 
-let rec init_avail (f: func): in_out = 
+let rec init_avail (f: func): avail_in_out = 
   List.fold_left (fun acc x -> init_avail_helper x acc) LabelMap.empty f
 (* End of init *)
 
@@ -83,30 +83,30 @@ let get_avail_out_set l mp =
   let (_, out) = (match LabelMap.find_opt l mp with None -> (AvailSet.empty, AvailSet.empty) | Some s -> s)
   in out
 
-let rec construct_in (old_am: in_out) (pred_list: String.t list) : AvailSet.t = match pred_list with
+let rec construct_in (old_am: avail_in_out) (pred_list: String.t list) : AvailSet.t = match pred_list with
   | [] -> AvailSet.empty 
   | hd::[] -> get_avail_out_set hd old_am
   | hd::tl -> AvailSet.inter (get_avail_out_set hd old_am) (construct_in old_am tl)
   
-let rec construct_out (b: block) (old_am: in_out) (new_in: AvailSet.t) : AvailSet.t =
+let rec construct_out (b: block) (old_am: avail_in_out) (new_in: AvailSet.t) : AvailSet.t =
   let gen = List.fold_left (fun acc inst -> inst_gen_helper inst acc) AvailSet.empty b in
   let kill = List.fold_left (fun acc inst -> inst_kill_helper inst acc) AvailSet.empty b in
   (AvailSet.union gen (AvailSet.diff new_in kill))
 
-let rec available_dataflow_helper (b: block) (new_am: in_out) (old_am: in_out) (pm: pred_map): in_out = match b with 
+let rec available_dataflow_helper (b: block) (new_am: avail_in_out) (old_am: avail_in_out) (pm: pred_map): avail_in_out = match b with 
   | (Label l)::_ -> 
     let new_in = construct_in old_am (LabelSet.to_list (get_pred_set l pm)) in 
     let new_out = construct_out b old_am new_in in
     LabelMap.add l (new_in, new_out) new_am
   | _ -> new_am
 
-let rec construct_available_dataflow (f: func) (old_am: in_out) (pm: pred_map): in_out = 
+let rec construct_available_dataflow (f: func) (old_am: avail_in_out) (pm: pred_map): avail_in_out = 
   let new_am = List.fold_left (fun acc b -> available_dataflow_helper b acc old_am pm) LabelMap.empty f in 
   if (LabelMap.equal map_compare new_am old_am) then new_am else construct_available_dataflow f new_am pm
 (* End of main loop *)
 
 (* Driver Function *)
-let rec available_expression (f : func) : in_out = 
+let rec available_expression (f : func) : avail_in_out = 
   let am = init_avail f in 
   let pm = init_pred f in
   construct_available_dataflow f am pm
@@ -121,7 +121,7 @@ let print_set (s: AvailSet.t) =
   let exp_strings = List.map aexp_to_string (AvailSet.to_list s) in
   String.concat "; " exp_strings
 
-let string_of_avails (ae: in_out) : string = 
+let string_of_avails (ae: avail_in_out) : string = 
   let print_label_exp (k, (v_in, v_out)) = Printf.sprintf "%s:\n\tin: %s\n\tout:%s" k (print_set v_in) (print_set v_out) in
   let rows = String.concat "\n" (List.map print_label_exp (LabelMap.to_list ae)) in 
   Printf.sprintf "{\n%s\n}" rows

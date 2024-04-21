@@ -15,13 +15,30 @@ let get_bop_exp (i: inst): aexp option = raise Implement_Me
 (* function to find the available exp by traversing a block in reverse
    returns: None if exp not found in block
             Some of updated block if exp found *)
-let traverse_block (e: aexp) (b: block) (temp: string) : block option = raise Implement_Me
+let traverse_block (e: aexp) (b: block) (temp: string) (avail_in: AvailSet.t): block option = 
+  if (AvailSet.mem e avail_in) then None (* exp in avail_in means it is not present in b *)
+  else (
+    let b_rev = List.rev b in
+    let rec helper (b_acc: block) (b_tail: block): block = (
+      match b_tail with
+        | [] -> b_acc
+        | hd :: tl -> 
+            match (get_bop_exp hd) with
+              | Some(e1) when e1 = e -> (
+                  match hd with 
+                    | Arith(x, y, op, z) -> (b_acc @ [Move(x, Var(temp)); Arith(Var(temp), y, op, z)] @ tl)
+                    | _ -> raise Implement_Me
+              )
+              | _ -> helper (b_acc @ [hd]) (tl) 
+    ) in
+    Some(List.rev (helper [] b_rev))
+  )
 
-(* function to back propogate, starting from the curr_block *)
-let traverse_pred_tree (b_label: string) (e: aexp) (f_acc:func) (temp:string): func = raise Implement_Me
+(* function to find availabe exp in the predecessor tree of given label *)
+let traverse_pred_tree (b_label: string) (e: aexp) (f_acc:func) (temp:string): func = raise Implement_Me 
 
 (* function to perform CSE for a given instruction *)
-let subexp_elim_ins (i: inst) (f_acc: func) (b_acc: block) (b_label: string) (avail: AvailSet.t): (block * func * AvailSet.t) = 
+let subexp_elim_ins (i: inst) (f_acc: func) (b_acc: block) (b_label: string) (avail: AvailSet.t) (b_avail_in: AvailSet.t): (block * func * AvailSet.t) = 
   let exp = get_bop_exp i in
   match exp with 
     | None -> (b_acc @ [i], f_acc, avail) (* ins not eligible for cse as it's not bop *)
@@ -29,8 +46,8 @@ let subexp_elim_ins (i: inst) (f_acc: func) (b_acc: block) (b_label: string) (av
       if (AvailSet.mem e avail) (* exp available *)
       then (
         let temp = new_temp() in (* temp variable to use in cse *)
-        match (traverse_block e b_acc temp) with
-          | None -> (
+        match (traverse_block e b_acc temp b_avail_in) with
+          None -> (
               match i with 
                   | Arith(x, _, _, _) -> (b_acc @ [Move(x, Var(temp))], (traverse_pred_tree b_label e f_acc temp), AvailSet.add e avail)
                   | _ -> raise Implement_Me
@@ -45,16 +62,16 @@ let subexp_elim_ins (i: inst) (f_acc: func) (b_acc: block) (b_label: string) (av
 (* function to perform CSE for a given block *)
 let subexp_elim_block (b: block) (f_acc: func) (avail_map: avail_in_out): func = 
   let block_label = find_block_label b in
-  let (block_avail, _) = LabelMap.find block_label avail_map in (* initialize avail expression with avail in *)
+  let (avail_in, _) = LabelMap.find block_label avail_map in (* initialize avail expression with avail in *)
   let rec helper (f_acc: func) (b_acc: block) (b_tail: block) (avail: AvailSet.t): (block * func * AvailSet.t) = (
     match b_tail with
       | [] -> (b_acc, (update_block b_acc f_acc), avail)
       | hd :: tl -> (
-        let (b_acc, f_acc, avail) =  (subexp_elim_ins hd f_acc b_acc block_label avail) in
+        let (b_acc, f_acc, avail) =  (subexp_elim_ins hd f_acc b_acc block_label avail avail_in) in
         (helper f_acc b_acc tl avail)
       )
   ) in
-  let (_, final_f, _) = (helper f_acc [] b block_avail) in
+  let (_, final_f, _) = (helper f_acc [] b avail_in) in
   (final_f)
 
 (* driver to perform common subexpression elimination *)
@@ -63,6 +80,6 @@ let subexp_elim (f : func) : func =
   let rec helper (f_acc : func) (f_tail : func) : func = (
     match f_tail with
       | [] -> f_acc
-      | hd :: tl -> helper (subexp_elim_block hd f_acc avail_map) tl  
+      | hd :: tl -> helper (subexp_elim_block hd f_acc avail_map) tl  (* TODO: update sequence of blocks to dfs *)
   ) in
   (helper f f)

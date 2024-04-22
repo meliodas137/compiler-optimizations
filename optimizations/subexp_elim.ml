@@ -3,6 +3,11 @@ open Cfg_ast
 
 exception Implement_Me
 
+let get_avail_in b_label avail_map = (
+  let (avail_in, _) = LabelMap.find b_label avail_map in
+  avail_in
+  )
+
 (* function to return label of given block *)
 let find_block_label (b:block): string = raise Implement_Me
 
@@ -11,6 +16,9 @@ let update_block (b: block) (f: func): func = raise Implement_Me
 
 (* function to extract binary exp from instruction *)
 let get_bop_exp (i: inst): aexp option = raise Implement_Me
+
+(* function to get block from label *)
+let block_from_label (l: string) (f: func): block = raise Implement_Me
 
 (* function to find the available exp by traversing a block in reverse
    returns: None if exp not found in block
@@ -36,11 +44,19 @@ let traverse_block (e: aexp) (b: block) (temp: string) (avail_in: AvailSet.t): b
   )
 
 (* function to find availabe exp in the predecessor tree of given label *)
-let traverse_pred_tree (b_label: string) (e: aexp) (f_acc:func) (temp:string): func = raise Implement_Me 
+let rec traverse_pred_tree (b_label: string) (e: aexp) (f_acc:func) (temp:string) (avail_map: avail_in_out) (pred_map: pred_map): func = 
+  let pred_list = LabelSet.to_list (get_pred_set b_label pred_map) in
+  let rec helper (b_label: string) (f_acc:func) : func = (
+    match (traverse_block e (block_from_label b_label f_acc) temp (get_avail_in b_label avail_map)) with
+      | Some(b_updated) -> (update_block b_updated f_acc)
+      | None -> (traverse_pred_tree b_label e f_acc temp avail_map pred_map)
+  ) in
+  (List.fold_left (fun f_acc pred -> (helper pred f_acc)) f_acc pred_list)
 
 (* function to perform CSE for a given instruction *)
-let subexp_elim_ins (i: inst) (f_acc: func) (b_acc: block) (b_label: string) (avail: AvailSet.t) (b_avail_in: AvailSet.t): (block * func * AvailSet.t) = 
+let subexp_elim_ins (i: inst) (f_acc: func) (b_acc: block) (b_label: string) (avail: AvailSet.t) (avail_map: avail_in_out) (pred_map: pred_map): (block * func * AvailSet.t) = 
   let exp = get_bop_exp i in
+  let b_avail_in = get_avail_in b_label avail_map in
   match exp with 
     | None -> (b_acc @ [i], f_acc, avail) (* ins not eligible for cse as it's not bop *)
     | Some(e) -> 
@@ -50,7 +66,7 @@ let subexp_elim_ins (i: inst) (f_acc: func) (b_acc: block) (b_label: string) (av
         match (traverse_block e b_acc temp b_avail_in) with
           None -> (
               match i with 
-                  | Arith(x, _, _, _) -> (b_acc @ [Move(x, Var(temp))], (traverse_pred_tree b_label e f_acc temp), AvailSet.add e avail)
+                  | Arith(x, _, _, _) -> (b_acc @ [Move(x, Var(temp))], (traverse_pred_tree b_label e f_acc temp avail_map pred_map), AvailSet.add e avail)
                   | _ -> raise Implement_Me
           )
           | Some(b_acc_updated) -> (* available exp found in curr block *) 
@@ -61,14 +77,14 @@ let subexp_elim_ins (i: inst) (f_acc: func) (b_acc: block) (b_label: string) (av
       else (b_acc @ [i], f_acc, AvailSet.add e avail) (* exp not available *)
 
 (* function to perform CSE for a given block *)
-let subexp_elim_block (b: block) (f_acc: func) (avail_map: avail_in_out): func = 
+let subexp_elim_block (b: block) (f_acc: func) (avail_map: avail_in_out) (pred_map: pred_map): func = 
   let block_label = find_block_label b in
   let (avail_in, _) = LabelMap.find block_label avail_map in (* initialize avail expression with avail in *)
   let rec helper (f_acc: func) (b_acc: block) (b_tail: block) (avail: AvailSet.t): (block * func * AvailSet.t) = (
     match b_tail with
       | [] -> (b_acc, (update_block b_acc f_acc), avail)
       | hd :: tl -> (
-        let (b_acc, f_acc, avail) =  (subexp_elim_ins hd f_acc b_acc block_label avail avail_in) in
+        let (b_acc, f_acc, avail) =  (subexp_elim_ins hd f_acc b_acc block_label avail avail_map pred_map) in
         (helper f_acc b_acc tl avail)
       )
   ) in
@@ -78,9 +94,5 @@ let subexp_elim_block (b: block) (f_acc: func) (avail_map: avail_in_out): func =
 (* driver to perform common subexpression elimination *)
 let subexp_elim (f : func) : func = 
   let avail_map = Available.available_expression f in
-  let rec helper (f_acc : func) (f_tail : func) : func = (
-    match f_tail with
-      | [] -> f_acc
-      | hd :: tl -> helper (subexp_elim_block hd f_acc avail_map) tl  (* TODO: update sequence of blocks to dfs *)
-  ) in
-  (helper f f)
+  let pred_map = Available.init_pred f in
+  (List.fold_left (fun f_acc b -> (subexp_elim_block b f_acc avail_map pred_map)) f f)

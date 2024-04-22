@@ -18,8 +18,8 @@ let update_block (b: block) (f: func): func =
   let rec helper f_acc f_tail = (
     match f_tail with
       | [] -> raise Implement_Me
-      | hd :: tl when ((find_block_label hd) = b_label) -> f_acc @ b @ tl
-      | hd :: tl -> helper (f_acc @ hd) tl 
+      | hd :: tl when ((find_block_label hd) = b_label) -> f_acc @ [b] @ tl
+      | hd :: tl -> helper (f_acc @ [hd]) tl 
   ) in
   helper [] f
 

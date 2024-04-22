@@ -3,16 +3,24 @@ open Cfg_ast
 
 exception Implement_Me
 
+(* function to return avail in set for given block label *)
 let get_avail_in b_label avail_map = (
   let (avail_in, _) = LabelMap.find b_label avail_map in
   avail_in
   )
 
 (* function to return label of given block *)
-let find_block_label (b:block): string = raise Implement_Me
+let find_block_label (b:block): string = match b with Label(label)::_ -> label | _ -> raise Implement_Me
 
 (* function to update given block in f *)
-let update_block (b: block) (f: func): func = raise Implement_Me
+let update_block (b: block) (f: func): func = 
+  let b_label = find_block_label b in
+  let rec helper f_acc f_tail = (
+    match f_tail with
+      | [] -> raise Implement_Me
+      | hd :: tl when ((find_block_label hd) = b_label) -> f_acc @ b @ tl
+      | hd :: tl -> helper (f_acc @ hd) tl 
+  )
 
 (* function to extract binary exp from instruction *)
 let get_bop_exp (i: inst): aexp option = raise Implement_Me

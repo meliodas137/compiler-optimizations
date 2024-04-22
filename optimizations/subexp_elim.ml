@@ -20,13 +20,24 @@ let update_block (b: block) (f: func): func =
       | [] -> raise Implement_Me
       | hd :: tl when ((find_block_label hd) = b_label) -> f_acc @ b @ tl
       | hd :: tl -> helper (f_acc @ hd) tl 
-  )
+  ) in
+  helper [] f
 
 (* function to extract binary exp from instruction *)
-let get_bop_exp (i: inst): aexp option = raise Implement_Me
+let get_bop_exp (i: inst): aexp option = 
+  match i with 
+    | Arith(_, x, op, y) -> Some(B_op(x, op, y))
+    | _ -> None
 
 (* function to get block from label *)
-let block_from_label (l: string) (f: func): block = raise Implement_Me
+let block_from_label (b_label: string) (f: func): block = 
+  let rec helper f = (
+    match f with
+      | [] -> raise Implement_Me
+      | hd :: tl when ((find_block_label hd) = b_label) -> hd
+      | _ :: tl -> helper tl 
+  ) in
+  helper f
 
 (* function to find the available exp by traversing a block in reverse
    returns: None if exp not found in block

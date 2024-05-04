@@ -24,8 +24,12 @@ let process_fn fn =
     (Cfg_ast.fun2string curfblocks)^ "\n");
   (* let ig = Cfg.build_interfere_graph curfblocks in
   print_string ((Cfg.string_of_igraph ig)^ "\n"); *)
-  let ae = Available.available_expression curfblocks in
-  print_string (Available.string_of_avails ae)
+  (* let ae = Available.available_expression curfblocks in
+  print_string (Available.string_of_avails ae) *)
+  let opt_blocks = Subexp_elim.subexp_elim curfblocks in
+  print_string ("blocks after common subexp elimination =\n" ^
+    (Cfg_ast.fun2string opt_blocks)^ "\n")
+
 
 let _ =
   let prog = parse_file() in

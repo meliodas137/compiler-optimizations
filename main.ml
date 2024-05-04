@@ -24,13 +24,14 @@ let process_fn fn =
     (Cfg_ast.fun2string curfblocks)^ "\n");
   (* let ig = Cfg.build_interfere_graph curfblocks in
   print_string ((Cfg.string_of_igraph ig)^ "\n"); *)
-  (* let ae = Available.available_expression curfblocks in
-  print_string (Available.string_of_avails ae) *)
+  let ae = Available.available_expression curfblocks in
   let opt_blocks_se = Subexp_elim.subexp_elim curfblocks in
-  let opt_blocks_cp = Cons_prop.cons_prop opt_blocks_se in
-  (print_string ("blocks after common subexp elimination =\n" ^
+  let opt_blocks_cp = Conscopy_prop.conscopy_prop opt_blocks_se in
+  (print_string ("available expressions =\n" ^
+  (Available.string_of_avails ae)^ "\n");
+  print_string ("blocks after common subexp elimination =\n" ^
   (Cfg_ast.fun2string opt_blocks_se)^ "\n");
-  print_string ("blocks after constant propogation =\n" ^
+  print_string ("blocks after constant and copy propogation =\n" ^
   (Cfg_ast.fun2string opt_blocks_cp)^ "\n");
   )
   

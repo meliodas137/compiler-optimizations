@@ -5,5 +5,5 @@ exception Implement_Me
 
 
 (* driver to perform constant propogation *)
-let cons_prop (f : func) : func = 
+let conscopy_prop (f : func) : func = 
   f

@@ -2,7 +2,9 @@ open Cfg_ast
 exception Implement_Me
 exception FatalError
 
-type aexp = B_op of (operand * arithop * operand) | Mem of (operand*int)
+type aexp = B_op of (operand * arithop * operand) 
+  | Mem of (operand * int) 
+  | Move of (operand * operand)
 module AExpression =
 struct
   type t = aexp
@@ -26,6 +28,7 @@ let contain_var (x: operand) (inst: aexp) : bool = match x with
     match inst with
     | B_op (op1, a_op, op2) -> if op1 == op || op2 == op then true else false
     | Mem (op1, _) -> if op1 == op then true else false
+    | Move (s, op1) -> if op1 == op then true else false
   )
 
 let prune (x: operand) (r_set: AvailSet.t) : AvailSet.t = AvailSet.filter (fun inst -> not (contain_var x inst)) r_set
@@ -33,20 +36,22 @@ let prune (x: operand) (r_set: AvailSet.t) : AvailSet.t = AvailSet.filter (fun i
 let rec inst_gen_helper (inst: inst) (r_set: AvailSet.t) = match inst with 
   | Arith (s, op2, a_op, op3) -> prune s (AvailSet.add (B_op (op2, a_op, op3)) r_set)
   | Load(s, op2, i) -> prune s (AvailSet.add (Mem (op2, i)) r_set)
+  | Move(s, (Int(_) as op1)) -> prune s (AvailSet.add (Move(s, op1)) r_set) 
+  | Move(s, (Var(_) as op1)) -> prune s (AvailSet.add (Move(s, op1)) r_set) 
   | _ -> r_set
 and
 inst_kill_helper (inst: inst) (r_set: AvailSet.t) = match inst with 
   | Arith (t, _, _, _) -> AvailSet.filter (fun inst -> contain_var t inst) r_set
-  | Load(t, _, _) -> AvailSet.filter (fun inst -> contain_var t inst) r_set
+  | Load(t, _, _) | Move(t, _) -> AvailSet.filter (fun inst -> contain_var t inst) r_set
   | Store(_, _, _) | Call _-> AvailSet.filter (fun inst -> match inst with Mem _ -> true | _ -> false) r_set
   | _ -> r_set
 (* End of kill and gen *)
-
 
 (* Initializing the available map; in_set = {}, out_set = {All possible exp} *)
 let collect_all_exp inst r_set = match inst with 
   | Arith (op1, op2, a_op, op3) -> AvailSet.add (B_op (op2, a_op, op3)) r_set
   | Load(op1, op2, i) -> AvailSet.add (Mem (op2, i)) r_set
+  | Move(s, op) -> AvailSet.add (Move(s, op)) r_set
   | _ -> r_set
 
 let rec init_avail_helper (b: block) (reach_map: avail_in_out): avail_in_out = match b with
@@ -117,7 +122,8 @@ let rec available_expression (f : func) : avail_in_out =
 let print_set (s: AvailSet.t) = 
   let aexp_to_string aexp = match aexp with 
   | B_op (op1, a_op, op2) -> (op2string op1) ^ (arithop2string a_op) ^ (op2string op2)
-  | Mem (op, i) -> "*(" ^ (op2string op) ^ "+" ^ (string_of_int i)^")" in
+  | Mem (op, i) -> "*(" ^ (op2string op) ^ "+" ^ (string_of_int i)^")" 
+  | Move(s, op) -> "(" ^ op2string s ^ ":=" ^ op2string op ^ ")"in
   let exp_strings = List.map aexp_to_string (AvailSet.to_list s) in
   String.concat "; " exp_strings
 

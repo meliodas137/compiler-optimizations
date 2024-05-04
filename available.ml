@@ -28,22 +28,17 @@ let contain_var (x: operand) (inst: aexp) : bool = match x with
     match inst with
     | B_op (op1, a_op, op2) -> if op1 == op || op2 == op then true else false
     | Mem (op1, _) -> if op1 == op then true else false
-    | Move (s, op1) -> if op1 == op then true else false
+    | Move (s, op1) -> if (op1 == op || s == op) then true else false
   )
 
 let prune (x: operand) (r_set: AvailSet.t) : AvailSet.t = AvailSet.filter (fun inst -> not (contain_var x inst)) r_set
 
-let rec inst_gen_helper (inst: inst) (r_set: AvailSet.t) = match inst with 
+let rec inst_gen_kill_helper (inst: inst) (r_set: AvailSet.t) = match inst with 
   | Arith (s, op2, a_op, op3) -> prune s (AvailSet.add (B_op (op2, a_op, op3)) r_set)
   | Load(s, op2, i) -> prune s (AvailSet.add (Mem (op2, i)) r_set)
-  | Move(s, (Int(_) as op1)) -> prune s (AvailSet.add (Move(s, op1)) r_set) 
-  | Move(s, (Var(_) as op1)) -> prune s (AvailSet.add (Move(s, op1)) r_set) 
-  | _ -> r_set
-and
-inst_kill_helper (inst: inst) (r_set: AvailSet.t) = match inst with 
-  | Arith (t, _, _, _) -> AvailSet.filter (fun inst -> contain_var t inst) r_set
-  | Load(t, _, _) | Move(t, _) -> AvailSet.filter (fun inst -> contain_var t inst) r_set
-  | Store(_, _, _) | Call _-> AvailSet.filter (fun inst -> match inst with Mem _ -> true | _ -> false) r_set
+  | Move(s, (Int(_) as op1)) -> AvailSet.add (Move(s, op1)) (prune s r_set) 
+  | Move(s, (Var(_) as op1)) -> AvailSet.add (Move(s, op1)) (prune s r_set)
+  | Store(_, _, _) | Call _-> AvailSet.filter (fun inst -> match inst with Mem _ -> false | _ -> true) r_set
   | _ -> r_set
 (* End of kill and gen *)
 
@@ -93,15 +88,13 @@ let rec construct_in (old_am: avail_in_out) (pred_list: String.t list) : AvailSe
   | hd::[] -> get_avail_out_set hd old_am
   | hd::tl -> AvailSet.inter (get_avail_out_set hd old_am) (construct_in old_am tl)
   
-let rec construct_out (b: block) (old_am: avail_in_out) (new_in: AvailSet.t) : AvailSet.t =
-  let gen = List.fold_left (fun acc inst -> inst_gen_helper inst acc) AvailSet.empty b in
-  let kill = List.fold_left (fun acc inst -> inst_kill_helper inst acc) AvailSet.empty b in
-  (AvailSet.union gen (AvailSet.diff new_in kill))
+let rec construct_out (b: block) (new_in: AvailSet.t) : AvailSet.t =
+  List.fold_left (fun acc inst -> inst_gen_kill_helper inst acc) new_in b
 
 let rec available_dataflow_helper (b: block) (new_am: avail_in_out) (old_am: avail_in_out) (pm: pred_map): avail_in_out = match b with 
   | (Label l)::_ -> 
     let new_in = construct_in old_am (LabelSet.to_list (get_pred_set l pm)) in 
-    let new_out = construct_out b old_am new_in in
+    let new_out = construct_out b new_in in
     LabelMap.add l (new_in, new_out) new_am
   | _ -> new_am
 

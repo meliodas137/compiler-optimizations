@@ -26,9 +26,15 @@ let process_fn fn =
   print_string ((Cfg.string_of_igraph ig)^ "\n"); *)
   (* let ae = Available.available_expression curfblocks in
   print_string (Available.string_of_avails ae) *)
-  let opt_blocks = Subexp_elim.subexp_elim curfblocks in
-  print_string ("blocks after common subexp elimination =\n" ^
-    (Cfg_ast.fun2string opt_blocks)^ "\n")
+  let opt_blocks_se = Subexp_elim.subexp_elim curfblocks in
+  let opt_blocks_cp = Cons_prop.cons_prop opt_blocks_se in
+  (print_string ("blocks after common subexp elimination =\n" ^
+  (Cfg_ast.fun2string opt_blocks_se)^ "\n");
+  print_string ("blocks after constant propogation =\n" ^
+  (Cfg_ast.fun2string opt_blocks_cp)^ "\n");
+  )
+  
+  
 
 
 let _ =

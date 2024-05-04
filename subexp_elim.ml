@@ -114,4 +114,4 @@ let subexp_elim_block (b: block) (f_acc: func) (avail_map: avail_in_out) (pred_m
 let subexp_elim (f : func) : func = 
   let avail_map = Available.available_expression f in
   let pred_map = Available.init_pred f in 
-  (List.fold_left (fun f_acc b -> (subexp_elim_block b f_acc avail_map pred_map)) f f) (* TODO: update sequence of blocks to dfs *)
+  (List.fold_left (fun f_acc b -> (subexp_elim_block b f_acc avail_map pred_map)) f f)

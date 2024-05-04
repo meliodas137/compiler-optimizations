@@ -26,10 +26,12 @@ cfg: mips cish
 	$(COMPILER) -c graph.ml
 	$(COMPILER) -c cfg.ml
 	$(COMPILER) -c available.ml
+	$(COMPILER) -c liveness.ml
 	$(COMPILER) -c subexp_elim.ml
+	$(COMPILER) -c dead_code_elem.ml
 	$(COMPILER) -c conscopy_prop.ml
 	$(COMPILER) -c main.ml
-	$(COMPILER) -o optimize cish_ast.cmo cish_lex.cmo cish_parse.cmo word32.cmo mips.cmo cfg_ast.cmo graph.cmo cfg.cmo available.cmo subexp_elim.cmo conscopy_prop.cmo main.cmo 
+	$(COMPILER) -o optimize cish_ast.cmo cish_lex.cmo cish_parse.cmo word32.cmo mips.cmo cfg_ast.cmo graph.cmo cfg.cmo available.cmo liveness.cmo subexp_elim.cmo dead_code_elem.cmo cons_prop.cmo main.cmo 
 
 clean:
 	-rm *.cmo *.cmi optimize cish_parse.ml cish_parse.mli cish_lex.ml

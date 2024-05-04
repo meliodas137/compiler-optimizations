@@ -27,12 +27,15 @@ let process_fn fn =
   let ae = Available.available_expression curfblocks in
   let opt_blocks_se = Subexp_elim.subexp_elim curfblocks in
   let opt_blocks_cp = Conscopy_prop.conscopy_prop opt_blocks_se in
+  let opt_blocks_dc = Dead_code_elem.dead_code_elem opt_blocks_cp in
   (print_string ("available expressions =\n" ^
   (Available.string_of_avails ae)^ "\n");
   print_string ("blocks after common subexp elimination =\n" ^
   (Cfg_ast.fun2string opt_blocks_se)^ "\n");
   print_string ("blocks after constant and copy propogation =\n" ^
   (Cfg_ast.fun2string opt_blocks_cp)^ "\n");
+  print_string ("blocks after dead code elimination =\n" ^
+  (Cfg_ast.fun2string opt_blocks_dc)^ "\n");
   )
   
   

@@ -5,5 +5,12 @@ If you run `make` it produces a binary called ./optimize. Running
 
  ./optimize [name of cish file]
 
-calls the Cish 2 block converter, then runs your interference graph generator,
-and then tries to print the CFG blocks and the interference.
+calls the Cish 2 block converter, then runs the following optimizations in the order:
+<ul>
+<li>Common Subexpression Elimination
+<li>Copy Propagation
+<li>Constant Propagation
+<li>Dead Code Elimination
+</ul>
+
+Besides, there are additional test files in the folder named "test".

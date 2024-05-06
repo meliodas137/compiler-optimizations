@@ -8,6 +8,11 @@
 *.cmxs
 *.cmxa
 
+# generated lexer and parser files
+cish_lex.ml
+cish_parse.ml
+cish_parse.mli
+optimize
 # ocamlbuild working directory
 _build/
 

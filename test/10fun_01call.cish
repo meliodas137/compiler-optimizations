@@ -1,7 +1,0 @@
-f() {
-  return 1;
-}
-
-main() {
-  return f() + f() + f();
-}

@@ -1,3 +1,0 @@
-main() {
-  return f(3);
-}

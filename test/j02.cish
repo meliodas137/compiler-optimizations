@@ -1,9 +1,0 @@
-main () {
-  let x = 12;
-  let y = 15; {
-  let z = x + y; {
-  x = y;
-  return z;
-  }
-  }
-}

@@ -1,6 +1,0 @@
-main() {
-  let x = 12;
-  let y = 4;
-  return x / y;
-}
-
